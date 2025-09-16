@@ -1,4 +1,7 @@
 {
+  "@jupyterlab/notebook-extension:tracker": {
+    "windowingMode": "defer"
+  },
   "@jupyterlab/notebook-extension:panel": {
     "toolbar": [
       {

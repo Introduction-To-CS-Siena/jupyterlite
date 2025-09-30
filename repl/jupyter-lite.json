@@ -6,7 +6,13 @@
         "@jupyterlab/drawio-extension",
         "jupyterlab-kernel-spy",
         "jupyterlab-tour"
-      ]
+      ],
+      "federated_extensions": [
+      {
+        "name": "jupyterlab-execute-time",
+        "load": "static/extension/jupyterlab-execute-time/index.js"
+      }
+    ]
     }
   }
   

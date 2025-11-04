@@ -43,9 +43,9 @@ ipyleaflet
 # Python: plotting libraries (optional)
 plotly>=6,<7
 bqplot
-jupyterlab-filesystem-access==0.6.0
+jupyterlab-filesystem-access==0.7.0
 jupyterlab-myst==2.4.2
 # aquirdturtle-collapsible-headings==3.1.0
 # python-lsp-server[all]==1.13.1
-jupyter-shared-drive==0.2.1
+#jupyter-shared-drive==0.2.1
 jupyterlab_execute_time

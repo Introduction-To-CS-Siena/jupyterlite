@@ -49,3 +49,4 @@ jupyterlab-myst==2.4.2
 # python-lsp-server[all]==1.13.1
 #jupyter-shared-drive==0.2.1
 jupyterlab_execute_time
+sidecar

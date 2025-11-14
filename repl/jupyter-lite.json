@@ -11,6 +11,10 @@
       {
         "name": "jupyterlab-execute-time",
         "load": "static/extension/jupyterlab-execute-time/index.js"
+      },
+      {
+        "name": "sidecar",
+        "load": "static/extension/sidecar/index.js"
       }
     ]
     }

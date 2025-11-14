@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run JupyterLite (F5)",
+      "type": "shell",
+      "request": "launch",
+      "command": "echo 'Launching JupyterLite tasks...'",
+      "preLaunchTask": "JupyterLite: serve"
+    }
+  ]
+}

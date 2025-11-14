@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "JupyterLite: clean",
+      "type": "shell",
+      "command": "rm",
+      "args": [
+        "-rf",
+        "_output"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "JupyterLite: build",
+      "type": "shell",
+      "command": "jupyter",
+      "args": [
+        "lite",
+        "build",
+        "--output-dir",
+        "_output"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "dependsOn": [
+        "JupyterLite: clean"
+      ]
+    },
+    {
+      "label": "JupyterLite: serve",
+      "type": "shell",
+      "command": "jupyter",
+      "args": [
+        "lite",
+        "serve",
+        "--output-dir",
+        "_output",
+        "--port",
+        "8000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "none",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

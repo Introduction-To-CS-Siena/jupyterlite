@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
 """Generate the JupyterLab App Launcher tiles for the CSIS 110 labs.
 
-Every notebook under ``files/`` becomes a card in the JupyterLite Launcher that
-opens that notebook straight from the file browser (no copy is made, so student
-work and the images/sounds next to the notebook keep working).
+Every notebook under ``files/`` becomes a card in the JupyterLite Launcher.
+Clicking a card navigates the file browser into that lab's folder and opens the
+notebook from there (no copy is made, so student work and the images/sounds next
+to the notebook keep working).
 
-The cards are written into ``overrides.json`` under the ``appLauncherData`` key,
-which is where the ``jupyter_app_launcher`` frontend extension reads them from
-when it runs in JupyterLite.  Every other key in ``overrides.json`` is left
-untouched.
+This runs *after* ``jupyter lite build`` and patches the built site in place:
+
+* the cards go into the ``appLauncherData`` key of ``settingsOverrides`` in
+  ``jupyter-lite.json``, where the ``jupyter_app_launcher`` frontend extension
+  reads them from when it runs in JupyterLite;
+* a small stylesheet goes into each built page, to lift the course sections
+  above the built-in Notebook/Console/Other ones.
+
+``appLauncherData`` deliberately does not live in the repository's
+``overrides.json``: ``jupyter lite check`` splits every key there on ``":"`` to
+find its schema and raises ``ValueError`` on a key without one.
 
 Usage::
 
-    python scripts/generate_launcher_tiles.py        # rewrite overrides.json
-    python scripts/generate_launcher_tiles.py --check # fail if it is stale
+    python scripts/generate_launcher_tiles.py dist  # patch a built site
+    python scripts/generate_launcher_tiles.py       # list the cards, change nothing
 
-Add a lab by dropping a folder with a notebook into ``files/`` and re-running
-this script; the title and subtitle are read from the notebook's own first
-markdown cell.
+Add a lab by dropping a folder with a notebook into ``files/``; the title and
+subtitle are read from the notebook's own first markdown cell, and the deploy
+workflow re-runs this script on every build.
 """
 
 from __future__ import annotations
@@ -31,7 +39,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENTS_DIR = REPO_ROOT / "files"
-OVERRIDES = REPO_ROOT / "overrides.json"
+LITE_JSON = "jupyter-lite.json"
 
 # Launcher sections, in the order they should appear.
 LABS_CATEGORY = "CSIS 110 Labs"
@@ -45,6 +53,9 @@ TITLE_OVERRIDES = {
 
 # Notebooks that should not get a launcher card at all.
 EXCLUDE = set()
+
+# Marks the stylesheet this script injects into the built pages.
+MARKER = "csis110-launcher-order"
 
 # Card colours, per section.
 COLORS = {
@@ -152,6 +163,69 @@ def badge(title: str, category: str) -> str:
     )
 
 
+def build_css() -> str:
+    """CSS that lifts the course sections to the top of the Launcher.
+
+    JupyterLab ranks the built-in Launcher sections (Notebook 0, Console 20,
+    Other 100) ahead of any section it does not know, and only an item's
+    ``categoryRank`` can beat that -- which ``jupyter_app_launcher`` does not
+    pass through.  Re-ordering the rendered sections with flexbox is the part
+    we can control from here.
+    """
+    rules = [
+        f"/* {MARKER} */",
+        ".jp-Launcher-content { display: flex; flex-direction: column; }",
+        ".jp-Launcher-section { order: 10; }",
+    ]
+    for order, category in enumerate((LABS_CATEGORY, HOMEWORK_CATEGORY), start=1):
+        rules.append(
+            f'.jp-Launcher-section:has(.jp-LauncherCard[data-category="{category}"])'
+            f" {{ order: {order}; }}"
+        )
+    return "\n".join(rules)
+
+
+def patch_pages(output_dir: Path) -> int:
+    """Inject :func:`build_css` into every built page of a JupyterLite site."""
+    style = f"<style>\n{build_css()}\n</style>\n</head>"
+    seen = patched = 0
+    for page in sorted(output_dir.rglob("index.html")):
+        text = page.read_text(encoding="utf-8")
+        if "</head>" not in text:
+            continue
+        seen += 1
+        if MARKER in text:
+            continue
+        page.write_text(text.replace("</head>", style, 1), encoding="utf-8")
+        patched += 1
+    if not seen:
+        print(f"error: no page under {output_dir} has a <head> to patch", file=sys.stderr)
+        return 1
+    print(f"Ordered the Launcher sections on {seen} page(s) ({patched} newly patched)")
+    return 0
+
+
+def patch_settings(output_dir: Path, config: list[dict]) -> int:
+    """Add the cards to the built site's settings overrides."""
+    lite_json = output_dir / LITE_JSON
+    if not lite_json.exists():
+        print(
+            f"error: {lite_json} not found; run `jupyter lite build` first",
+            file=sys.stderr,
+        )
+        return 1
+    data = json.loads(lite_json.read_text(encoding="utf-8"))
+    overrides = data.setdefault("jupyter-config-data", {}).setdefault(
+        "settingsOverrides", {}
+    )
+    overrides["appLauncherData"] = {"config": config}
+    lite_json.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"Wrote {len(config)} launcher cards to {lite_json}")
+    return 0
+
+
 def build_config() -> list[dict]:
     entries = []
     notebooks = sorted(CONTENTS_DIR.rglob("*.ipynb"), key=natural_key)
@@ -176,7 +250,9 @@ def build_config() -> list[dict]:
                 "source": [
                     {
                         "label": f"Open {title}",
-                        "id": "docmanager:open",
+                        # open-path navigates the file browser into the folder,
+                        # selects the notebook there, and then opens it.
+                        "id": "filebrowser:open-path",
                         "args": {"path": rel},
                     }
                 ],
@@ -188,34 +264,22 @@ def build_config() -> list[dict]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--check",
-        action="store_true",
-        help="exit non-zero if overrides.json is out of date instead of rewriting it",
+        "output_dir",
+        nargs="?",
+        type=Path,
+        help="a JupyterLite site built by `jupyter lite build`; "
+        "omit to only list the cards",
     )
     args = parser.parse_args()
 
-    overrides = json.loads(OVERRIDES.read_text(encoding="utf-8"))
     config = build_config()
-    updated = dict(overrides)
-    updated["appLauncherData"] = {"config": config}
-    rendered = json.dumps(updated, indent=2, ensure_ascii=False) + "\n"
-
-    if args.check:
-        if OVERRIDES.read_text(encoding="utf-8") != rendered:
-            print(
-                "overrides.json is out of date; run "
-                "`python scripts/generate_launcher_tiles.py`",
-                file=sys.stderr,
-            )
-            return 1
-        print(f"overrides.json is up to date ({len(config)} launcher cards)")
-        return 0
-
-    OVERRIDES.write_text(rendered, encoding="utf-8")
-    print(f"Wrote {len(config)} launcher cards to {OVERRIDES.relative_to(REPO_ROOT)}")
     for entry in config:
         print(f"  [{entry['catalog']}] {entry['title']}")
-    return 0
+    if args.output_dir is None:
+        print(f"{len(config)} launcher cards (pass an output dir to apply them)")
+        return 0
+
+    return patch_settings(args.output_dir, config) or patch_pages(args.output_dir)
 
 
 if __name__ == "__main__":

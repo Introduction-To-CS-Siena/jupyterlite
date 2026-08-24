@@ -17,24 +17,39 @@ jupyter lite serve
 ## Launcher cards for the labs
 
 Every notebook under `files/` gets a card in the JupyterLite Launcher, grouped
-into **CSIS 110 Labs** and **Homework**, so students can open a lab
-without digging through the file browser. Clicking a card runs
-`docmanager:open` on the real file in the file browser — it does not copy the
-notebook, so a student's saved work and the images/sounds stored beside the
-notebook keep working.
+into **CSIS 110 Labs** and **Homework** and shown above the built-in
+Notebook/Console/Other sections. Clicking a card navigates the file browser
+into that lab's folder, selects the notebook and opens it — it does not copy
+the notebook, so a student's saved work and the images/sounds stored beside it
+keep working.
 
 The cards are rendered by the [`jupyter-app-launcher`](https://github.com/trungleduc/jupyter_app_launcher)
-extension, which reads them from the `appLauncherData` key of `overrides.json`.
-That key is generated, not hand-written:
+extension. `scripts/generate_launcher_tiles.py` generates them from the `files/`
+tree and patches them into an already-built site:
 
 ```bash
-python scripts/generate_launcher_tiles.py          # rewrite the cards
-python scripts/generate_launcher_tiles.py --check  # fail if they are stale
+jupyter lite build --contents files --output-dir dist
+python scripts/generate_launcher_tiles.py dist  # add the cards
+jupyter lite serve --output-dir dist
+
+python scripts/generate_launcher_tiles.py       # list the cards, change nothing
 ```
 
-To add a lab, drop a folder with a notebook into `files/` and re-run the
-script (CI runs it before every build too). The card's title comes from the
+The deploy workflow runs the same two commands, so to add a lab you only have
+to drop a folder with a notebook into `files/`. A card's title comes from the
 notebook's own first markdown heading, so `# Lab 11` plus `## Recursion!`
 becomes a card labelled *Lab 11: Recursion!*. If a notebook's heading does not
 identify it well, add an entry to `TITLE_OVERRIDES` at the top of the script;
 `EXCLUDE` hides a notebook from the Launcher entirely.
+
+Two notes on why the script patches `dist/` instead of this repo's
+`overrides.json`:
+
+- `jupyter lite check` splits every key in `overrides.json` on `":"` to find
+  the matching schema, so the extension's `appLauncherData` key crashes it.
+  The cards go straight into `settingsOverrides` in the built
+  `jupyter-lite.json` instead, after the check has run.
+- JupyterLab ranks its own Launcher sections ahead of any it does not know,
+  and only an item's `categoryRank` can beat that — which `jupyter-app-launcher`
+  does not pass through. The script injects a small stylesheet into the built
+  pages that re-orders the sections with flexbox.

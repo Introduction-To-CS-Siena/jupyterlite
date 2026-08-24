@@ -50,5 +50,8 @@ jupyterlab-myst==2.6.0
 jupyterlab_execute_time==3.3.0
 sidecar==0.8.1
 
+# JupyterLab: custom Launcher cards for the labs (see scripts/generate_launcher_tiles.py)
+jupyter-app-launcher==0.3.2
+
 # Prebuilt notebook-pairing extension maintained in its own repository.
 csis110-jupyterlab-pairing==0.2.1

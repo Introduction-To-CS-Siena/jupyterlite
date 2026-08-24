@@ -43,10 +43,12 @@ ipyleaflet==0.20.0
 # Python: plotting libraries (optional)
 plotly==6.9.0
 bqplot==0.13.1
-jupyterlab-filesystem-access==0.7.0
 jupyterlab-myst==2.6.0
 # aquirdturtle-collapsible-headings==3.1.0
 # python-lsp-server[all]==1.13.1
 #jupyter-shared-drive==0.2.1
 jupyterlab_execute_time==3.3.0
 sidecar==0.8.1
+
+# Prebuilt notebook-pairing extension maintained in its own repository.
+csis110-jupyterlab-pairing==0.2.1

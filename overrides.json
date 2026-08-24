@@ -29,5 +29,8 @@
       "tabSize": 4,
       "insertSpaces": true
     }
+  },
+  "@csis110/jupyterlab-pairing:plugin": {
+    "serviceUrl": "https://sync-lab.csis110.com"
   }
 }

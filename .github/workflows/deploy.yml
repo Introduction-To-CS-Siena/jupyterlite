@@ -33,6 +33,9 @@ jobs:
             echo "::error::A JupyterLab extension is incompatible with this JupyterLab version"
             exit 1
           fi
+      - name: Add the Launcher cards for the labs
+        run: |
+          python scripts/generate_launcher_tiles.py dist
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

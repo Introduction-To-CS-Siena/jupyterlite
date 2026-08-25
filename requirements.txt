@@ -54,4 +54,4 @@ sidecar==0.8.1
 jupyter-app-launcher==0.3.2
 
 # Prebuilt notebook-pairing extension maintained in its own repository.
-csis110-jupyterlab-pairing==0.2.1
+csis110-jupyterlab-pairing==0.4.0

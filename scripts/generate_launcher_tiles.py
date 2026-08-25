@@ -12,7 +12,8 @@ This runs *after* ``jupyter lite build`` and patches the built site in place:
   ``jupyter-lite.json``, where the ``jupyter_app_launcher`` frontend extension
   reads them from when it runs in JupyterLite;
 * a small stylesheet goes into each built page, to lift the course sections
-  above the built-in Notebook/Console/Other ones.
+  -- and the pairing section next to them -- above the built-in
+  Notebook/Console/Other ones.
 
 ``appLauncherData`` deliberately does not live in the repository's
 ``overrides.json``: ``jupyter lite check`` splits every key there on ``":"`` to
@@ -41,9 +42,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENTS_DIR = REPO_ROOT / "files"
 LITE_JSON = "jupyter-lite.json"
 
-# Launcher sections, in the order they should appear.
 LABS_CATEGORY = "CSIS 110 Labs"
 HOMEWORK_CATEGORY = "Homework"
+# Registered by the @csis110/jupyterlab-pairing extension, not by this script.
+PAIRING_CATEGORY = "Notebook Pairing"
+
+# Launcher sections, top to bottom, above the built-in Notebook/Console/Other.
+SECTION_ORDER = (PAIRING_CATEGORY, LABS_CATEGORY, HOMEWORK_CATEGORY)
 
 # Notebooks whose own first heading does not identify them well enough.
 TITLE_OVERRIDES = {
@@ -66,6 +71,7 @@ COLORS = {
 TAG_RE = re.compile(r"<[^>]+>")
 EMPHASIS_RE = re.compile(r"[*_]{1,3}")
 H1_BLOCK_RE = re.compile(r"<h1\b.*?</h1>", re.IGNORECASE | re.DOTALL)
+STYLE_RE = re.compile(r"<style\b.*?</style>\s*", re.IGNORECASE | re.DOTALL)
 LAB_NUM_RE = re.compile(r"^Lab\s*(\d+)([a-z]?)", re.IGNORECASE)
 
 # Subtitles that are course logistics rather than a name for the notebook.
@@ -164,7 +170,7 @@ def badge(title: str, category: str) -> str:
 
 
 def build_css() -> str:
-    """CSS that lifts the course sections to the top of the Launcher.
+    """CSS that lifts the sections in :data:`SECTION_ORDER` to the top.
 
     JupyterLab ranks the built-in Launcher sections (Notebook 0, Console 20,
     Other 100) ahead of any section it does not know, and only an item's
@@ -173,11 +179,10 @@ def build_css() -> str:
     we can control from here.
     """
     rules = [
-        f"/* {MARKER} */",
         ".jp-Launcher-content { display: flex; flex-direction: column; }",
         ".jp-Launcher-section { order: 10; }",
     ]
-    for order, category in enumerate((LABS_CATEGORY, HOMEWORK_CATEGORY), start=1):
+    for order, category in enumerate(SECTION_ORDER, start=1):
         rules.append(
             f'.jp-Launcher-section:has(.jp-LauncherCard[data-category="{category}"])'
             f" {{ order: {order}; }}"
@@ -187,21 +192,27 @@ def build_css() -> str:
 
 def patch_pages(output_dir: Path) -> int:
     """Inject :func:`build_css` into every built page of a JupyterLite site."""
-    style = f"<style>\n{build_css()}\n</style>\n</head>"
-    seen = patched = 0
+    style = f'<style id="{MARKER}">\n{build_css()}\n</style>\n</head>'
+    # Replace any stylesheet an earlier run left behind, so re-running picks up
+    # a changed section order instead of silently keeping the old one.
+    def drop_stale(text: str) -> str:
+        return STYLE_RE.sub(
+            lambda m: "" if MARKER in m.group(0) else m.group(0), text
+        )
+
+    seen = 0
     for page in sorted(output_dir.rglob("index.html")):
         text = page.read_text(encoding="utf-8")
         if "</head>" not in text:
             continue
         seen += 1
-        if MARKER in text:
-            continue
-        page.write_text(text.replace("</head>", style, 1), encoding="utf-8")
-        patched += 1
+        page.write_text(
+            drop_stale(text).replace("</head>", style, 1), encoding="utf-8"
+        )
     if not seen:
         print(f"error: no page under {output_dir} has a <head> to patch", file=sys.stderr)
         return 1
-    print(f"Ordered the Launcher sections on {seen} page(s) ({patched} newly patched)")
+    print(f"Ordered the Launcher sections on {seen} page(s)")
     return 0
 
 

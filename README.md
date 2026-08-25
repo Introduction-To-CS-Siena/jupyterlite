@@ -17,8 +17,10 @@ jupyter lite serve
 ## Launcher cards for the labs
 
 Every notebook under `files/` gets a card in the JupyterLite Launcher, grouped
-into **CSIS 110 Labs** and **Homework** and shown above the built-in
-Notebook/Console/Other sections. Clicking a card navigates the file browser
+into **CSIS 110 Labs** and **Homework**. Those sections, and the
+**Notebook Pairing** section above them, are lifted above the built-in
+Notebook/Console/Other ones — `SECTION_ORDER` in the script sets the order.
+Clicking a lab card navigates the file browser
 into that lab's folder, selects the notebook and opens it — it does not copy
 the notebook, so a student's saved work and the images/sounds stored beside it
 keep working.
@@ -51,5 +53,6 @@ Two notes on why the script patches `dist/` instead of this repo's
   `jupyter-lite.json` instead, after the check has run.
 - JupyterLab ranks its own Launcher sections ahead of any it does not know,
   and only an item's `categoryRank` can beat that — which `jupyter-app-launcher`
-  does not pass through. The script injects a small stylesheet into the built
-  pages that re-orders the sections with flexbox.
+  does not pass through, and which we cannot set on the pairing extension's
+  card at all. The script injects a small stylesheet into the built pages that
+  re-orders the sections with flexbox instead.

@@ -43,7 +43,7 @@ ipyleaflet==0.20.0
 # Python: plotting libraries (optional)
 plotly==6.9.0
 bqplot==0.13.1
-jupyterlab-myst==2.6.0
+jupyterlab-myst==2.7.0
 # aquirdturtle-collapsible-headings==3.1.0
 # python-lsp-server[all]==1.13.1
 #jupyter-shared-drive==0.2.1
